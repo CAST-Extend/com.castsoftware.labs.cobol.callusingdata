@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>com.castsoftware.labs.cobol.callusingdata</id>
+    <version>1.0.0</version>
+    <title>COBOL Data sharing via CALL USING statements</title>
+    <authors>CAST Labs</authors>
+    <owners>CAST</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <licenseUrl>https://help.castsoftware.com/hc/en-us/articles/212612648-AIP-Extension-License</licenseUrl>
+    <projectUrl>https://github.com/CAST-Extend/com.castsoftware.labs.cobol.callusingdata</projectUrl>
+	<description>This extension helps understand the Cobol Data interface used by two Cobol Programs that are calling each other with a CALL USING statement: it will create REFER links between the matching Cobol Data items on callee and caller side.</description>
+    <releaseNotes>https://github.com/CAST-Extend/com.castsoftware.labs.cobol.callusingdata/wiki</releaseNotes>
+	<tags>CAIP8.3.x Mainframe Cobol Data CSS</tags>
+     <dependencies>
+      <dependency id="CAIP" version="8.3.0" />
+	  <dependency id="com.castsoftware.mainframe" version="1.0.18-funcrel" />
+    </dependencies>
+  </metadata>
+</package>
