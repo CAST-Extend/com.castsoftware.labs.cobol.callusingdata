@@ -161,23 +161,3 @@ def matchProperties(idclr, idcle, PropValueClr, PropValueCle):
          
     return matcheditems
 
-    
-    
-# PropValueClr="""1 01 PAP-FE BY REFERENCE
-# 2 10 PAP-FE-PMID X(16) BY REFERENCE
-# 2 10 PAP-FE-NR-SECTION XXX BY REFERENCE
-# """
-# PropValueCle="""1 01 M-FE BYY REFERENCE
-# 2 10 M-FE-PMID X(16) BY REFERENCE
-# 2 10 M-FE-NR BY REFERENCE
-# 3 15 M-FE-NR-SECTION XXX BY REFERENCE
-# 4 88 M-FE-NR-SECTION-A00 BY REFERENCE
-# 4 88 M-FE-NR-SECTION-B00 BY REFERENCE
-# 4 88 M-FE-NR-SECTION-B10 BY REFERENCE
-#"""
-
-# matcheditems=matchProperties(375,392,PropValueClr,PropValueCle)
-# cpt=0
-# for line in matcheditems: 
-#     print(matcheditems[cpt])
-#     cpt+=1    
