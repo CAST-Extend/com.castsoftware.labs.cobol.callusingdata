@@ -8,13 +8,14 @@
     <owners>CAST</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <licenseUrl>https://help.castsoftware.com/hc/en-us/articles/212612648-AIP-Extension-License</licenseUrl>
+    <iconUrl>https://github.com/CAST-Extend/com.castsoftware.labs.cobol.callusingdata/blob/f3b8824de9865cb58937da4f6a64e283007022f9/com.castsoftware.labs.cobol.callusingdata.png</iconUrl>
     <projectUrl>https://github.com/CAST-Extend/com.castsoftware.labs.cobol.callusingdata</projectUrl>
-	<description>This extension helps understand the Cobol Data interface used by two Cobol Programs that are calling each other with a CALL USING statement: it will create REFER links between the matching Cobol Data items on callee and caller side.</description>
+    <description>This extension helps understand the Cobol Data interface used by two Cobol Programs that are calling each other with a CALL USING statement: it will create REFER links between the matching Cobol Data items on callee and caller side.</description>
     <releaseNotes>https://github.com/CAST-Extend/com.castsoftware.labs.cobol.callusingdata/wiki</releaseNotes>
-	<tags>CAIP8.3.x Mainframe Cobol Data CSS</tags>
-     <dependencies>
-      <dependency id="CAIP" version="8.3.0" />
-	  <dependency id="com.castsoftware.mainframe" version="1.0.18-funcrel" />
-    </dependencies>
+    <tags>CAIP8.3.x Mainframe Cobol Data CSS</tags>
+    <dependencies>
+      <dependency id="CAIP" version="8.3.26" />
+        <dependency id="com.castsoftware.mainframe" version="1.0.18-funcrel" />
+      </dependencies>
   </metadata>
 </package>
