@@ -144,8 +144,7 @@ def matchProperties(idclr, idcle, PropValueClr, PropValueCle):
                 clefname=clefname+'.'+clename
 
             matcheditems.append([idclr,idcle,clrname,clename,clrfname,clefname])
-            
-            print([idclr,idcle,clrname,clename,clrfname,clefname])
+            #print([idclr,idcle,clrname,clename,clrfname,clefname])
             
             curclepos+=1
             curclrpos+=1
