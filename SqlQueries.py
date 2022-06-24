@@ -52,6 +52,10 @@ def get_sql_drop_using_prdiv():
     return "drop table if exists using_prdiv"
 def get_sql_drop_links_table():    
     return "drop table if exists create_links"
+def get_sql_drop_item_parents():    
+    return "drop table if exists item_parents;"
+def get_sql_drop_item_parents_final():    
+    return "drop table if exists item_parents_final;"
         
 def get_sql_compute_properties_step01():
     return """
@@ -66,7 +70,7 @@ def get_sql_compute_properties_step01():
         and cle.objtyp=545 --'Cobol Program' 
         and lnk.caller_id=clr.idkey
         and lnk.called_id=cle.idkey
-        and lnk.link_type_lo=2048 and lnk.link_type_hi=65536
+        and lnk.link_type_lo=2048 and lnk.link_type_hi=65536 -- Cp links
      """  
      
 def get_sql_compute_properties_step02():
@@ -84,7 +88,7 @@ def get_sql_compute_properties_step02():
         and not od.infval  ~ '^[0-9]+[ ]+88[ ]+'  -- Exclude level 88 items
         group by lnk.link_id, lnk.idclr, lnk.idcle
     """
-        
+   
 def get_sql_compute_properties_step03():
     return """
         insert into using_prdiv
@@ -202,4 +206,6 @@ def get_sql_update32_create_links_table():
     """
 
 def get_sql_nblinks_created():    
-    return "select count(distinct (cleitemid, clritemid)) from create_links"
+    return """select count(distinct (cleitemid, clritemid)) 
+    from create_links
+    """
