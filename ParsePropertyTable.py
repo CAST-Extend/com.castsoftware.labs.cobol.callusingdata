@@ -1,162 +1,234 @@
+import re
+
 def parseProperty(PropValue):
     # Parses the value of the "Cobol Data in USING statement" property 
     # attached to a CALL USING link or a Procedure Division
     # Output: a table with one item per Cobol Data item listed in the property
     
-    PropValue=PropValue.replace('BY ','')
+    PropValue=PropValue.replace('BY REFERENCE','REFERENCE')
+    PropValue=PropValue.replace('BY CONTENT','CONTENT')
+    PropValue=PropValue.replace('BY VALUE','VALUE')
+    
     PropValueTable=PropValue.splitlines()
 
     line0=PropValueTable[0].strip().split()
     line0size=len(line0)
     
     if line0size < 4:
-        print ("Error: first item has wrong size: "+PropValueTable[0])
+        # First item should have at least 4 elements. E.g. 1 01 M-FE REFERENCE 
         return []
     if line0[0]!='1':
-        print ("Error: first item has wrong level (should be 1): "+PropValueTable[0])
+        # First item should be level1. E.g. 1 01 M-FE REFERENCE 
         return []
-    
+
     ParsedPropValueTable=[]
+    
     for line in PropValueTable:
         line=line.strip().split()
         linelen=len(line)
-        if linelen < 4:
-            print ("Error: item has wrong size: "+' '.join(line))
-            return []
-        if line[linelen-1] not in ['REFERENCE','CONTENT','VALUE']:
-            print ('Error: syntax problem (only BY REFERENCE, CONTENT or VALUE allowed): '+' '.join(line))
-            return []
-        ParsedPropValueTable.append([line[0],line[2]])
-    return ParsedPropValueTable
-
-def getChildCount(ParsedProperty,position):
-    # Counts the number of child Cobol Data artifacts under the one specified
-    
-    PropertyLen=len(ParsedProperty)    
-    if position+1 > PropertyLen or position < 0:
-        # out of range
-        return -1
-    if position+1 == PropertyLen:
-        # we are on last item of list
-        return 0   
-    
-    startlevel=int(ParsedProperty[position][0])
-    subleveltocount=startlevel+1
-    
-    sublevelcount=0  
+        
+        if line[0]=='1':
+            # Level1 data item
+            ParsedPropValueTable.append([line[0],line[2],'LEVEL1'])
+        else:
+            if linelen < 4:
+                # Item should have at least 4 elements. E.g. 3 15 M-FE-NR-SECTION XXX REFERENCE
+                return []
+            # if line[linelen-1] not in ['REFERENCE','CONTENT','VALUE']:
+            #     print ('Error: syntax problem (only BY REFERENCE, CONTENT or VALUE allowed): '+' '.join(line))
+            #     return []
             
-    while True:
-        position+=1
-        if position > PropertyLen-1:
-            break
+            # Groupinq data item. E.g: 2 10 M-FE-NR REFERENCE (no datatype => has sublevel(s))
+            if linelen == 4:
+                ParsedPropValueTable.append([line[0],line[2],'GROUP'])
+                
+            # Data item with type
+            if linelen > 4:
+                ParsedPropValueTable.append([line[0],line[2],normalizePic(line[3])])
+
+    ParsedPropValueTableWithFullName=computeFullname(ParsedPropValueTable)
+    
+    return ParsedPropValueTableWithFullName
+
+def normalizePic(pic):
+    # Normalizes type description to make them comparable.
+    # E.g replaces XX with X(2) or 9(05) with 9(5)...
+    
+    patx=re.compile('^[X]+$')
+    pat9=re.compile('^[9]+$')
+    
+    # Strip heading '0' characters
+    npic=re.sub(r'\(0+', '(', pic)
+    
+    if patx.match(npic):
+        nb=npic.count('X')
+        npic='X('+str(nb)+')'
         
-        curlevel=int(ParsedProperty[position][0])
+    if pat9.match(npic):
+        nb=npic.count('9')
+        npic='9('+str(nb)+')'
 
-        if curlevel > subleveltocount:
-            continue
-
-        if curlevel < subleveltocount:
-            break
+    return npic     
+       
+       
+def computeFullname(ParsedPropValueTable):
+    # Computes data items fullname
+    
+    if ParsedPropValueTable==[]:
+        print ('Parsing error:')
+        print (ParsedPropValueTable)
+        return []
+    
+    fullnameitems=[]
+    curpos=0
+    curlevel=1
+    prevlevel=1
+    prevname=''
+    fnameprefixtab=[]
+    
+    lenParsedProperty=len(ParsedPropValueTable)
         
-        if curlevel == subleveltocount:
-            sublevelcount+=1               
+    while curpos < lenParsedProperty:
 
-    return sublevelcount
+        prevlevel=curlevel
+        
+        level=ParsedPropValueTable[curpos][0]
+        name=ParsedPropValueTable[curpos][1]
+        pic=ParsedPropValueTable[curpos][2]
+        
+        curlevel=int(level)
+                
+        if curlevel>prevlevel and prevname!='':
+            fnameprefixtab.append(prevname)
+            
+        if curlevel<prevlevel:
+            fnameprefixtab=fnameprefixtab[:curlevel-prevlevel]
+       
+        fname='.'.join(fnameprefixtab)
+        
+        if fname=='':
+            fname=name
+        else:
+            fname=fname+'.'+name 
+              
+        fullnameitems.append([level,name,pic,fname])
+            
+        curpos+=1        
+        prevname=name
+         
+    return fullnameitems   
 
-def matchProperties(idclr, idcle, PropValueClr, PropValueCle):
-    # Scans the USING property from the CALL USING Link on one side 
-    # and from the called Procedure Division on the other side
-    # and tries to find a cross-match for each items 
-    # Output: table with matching items    
-     
+
+def getNoGroupItems (fullnameitems):
+    # Extracts the list of level1 + actual data items (i.e not groups)
+    
+    lenfullnameitems=len(fullnameitems)
+    curpos=0
+    fullnameitemsnogroup=[]
+    while curpos < lenfullnameitems:
+        if fullnameitems[curpos][2]!='GROUP':
+            fullnameitemsnogroup.append(fullnameitems[curpos])        
+        curpos+=1
+    
+    return fullnameitemsnogroup
+
+
+def getLevelOnePositions(ParsedProperty):
+    # Produces the list of positions of Level1 items found in the input list
+      
+    levelonepositions=[]
+    curpos=0
+    propertylen=len(ParsedProperty)
+    while curpos < propertylen:
+        if ParsedProperty[curpos][0]=='1':
+            levelonepositions.append(curpos)
+        curpos+=1
+    return levelonepositions
+
+
+def matchProperties(idclr, idcle, PropValueClr, PropValueCle):    
+    # Coordinates property matching process
+    
     ParsedPropertyClr=parseProperty(PropValueClr)
     ParsedPropertyCle=parseProperty(PropValueCle)
     
-    if ParsedPropertyClr==[] or ParsedPropertyCle==[]:
-        print ('General parsing error:')
-        print (ParsedPropertyClr)
-        print (ParsedPropertyCle)
+    ParsedPropertyClrNoGroup=getNoGroupItems(ParsedPropertyClr)
+    ParsedPropertyCleNoGroup=getNoGroupItems(ParsedPropertyCle)    
+    
+    if ParsedPropertyClr==[] or ParsedPropertyCle==[] or ParsedPropertyClrNoGroup==[] or ParsedPropertyCleNoGroup==[]:
+        # One USING property parsing did not succeed
         return []
     
+    # levelNoGroupmatch will also include level1 items:
+    levelNoGroupmatch=doMatchProperties(idclr, idcle, ParsedPropertyClrNoGroup, ParsedPropertyCleNoGroup)
+
+    return levelNoGroupmatch
+
+
+def doMatchProperties(idclr, idcle, ParsedPropertyClr, ParsedPropertyCle):
+    # Scans the USING property from the CALL USING Link on one side 
+    # and from the called Procedure Division on the other side
+    # and finds cross-matching items (data types have to match)    
+    # Output: table with matching items
+    
     matcheditems=[]
-    curclrpos=0
-    curclepos=0
-    curclrlevel=1
-    curclelevel=1
-    prevclrlevel=1
-    prevclelevel=1    
-    # ResumeLevel=100000
+    
+    # level1 positions tables:
+    leveloneposinclr=getLevelOnePositions(ParsedPropertyClr)
+    leveloneposincle=getLevelOnePositions(ParsedPropertyCle)
+
+    # level1 positions tables length:
+    leveloneposinclrlen=len(leveloneposinclr)
+    leveloneposinclelen=len(leveloneposincle)    
+    
+    # Current position in the level1 positions tables
+    curleveloneposinclr=0
+    curleveloneposincle=0
     
     lenParsedPropertyClr=len(ParsedPropertyClr)
     lenParsedPropertyCle=len(ParsedPropertyCle)
     
-    fnameclrprefixtab=[]
-    fnamecleprefixtab=[]
-    
-    prevclrname=''
-    prevclename=''  
+    curposclr=0
+    curposcle=0    
+      
+    while curleveloneposinclr < leveloneposinclrlen and curleveloneposincle < leveloneposinclelen: 
         
-    while curclepos < lenParsedPropertyCle and curclrpos < lenParsedPropertyClr:
-        
-        prevclrlevel=curclrlevel
-        prevclelevel=curclelevel
-        
-        clrname=ParsedPropertyClr[curclrpos][1]
-        clename=ParsedPropertyCle[curclepos][1]
-        
-        curclrlevel=int(ParsedPropertyClr[curclrpos][0])
-        curclelevel=int(ParsedPropertyCle[curclepos][0])
-                
-        if curclrlevel>prevclrlevel and prevclrname!='':
-            fnameclrprefixtab.append(prevclrname)
-        if curclelevel>prevclelevel and prevclename!='':
-            fnamecleprefixtab.append(prevclename)
-            
-        if curclrlevel<prevclrlevel:
-            fnameclrprefixtab=fnameclrprefixtab[:curclrlevel-prevclrlevel]
-        if curclelevel<prevclelevel:
-            fnamecleprefixtab=fnamecleprefixtab[:curclelevel-prevclelevel]        
-           
-        # NbChildCle=getChildCount(ParsedPropertyCle,curclepos)
-        # NbChildClr=getChildCount(ParsedPropertyClr,curclrpos)
-        
-        if curclelevel==curclrlevel:
-            
-            # if NbChildCle!=NbChildClr:
-            #     if curclelevel < ResumeLevel:
-            #         ResumeLevel=curclelevel
-            # else:
-            #     if ResumeLevel>=curclelevel and ResumeLevel>=curclrlevel:
-            #         ResumeLevel=100000
-            #if ResumeLevel>=curclelevel:
-                
-            clrfname='.'.join(fnameclrprefixtab)
-            clefname='.'.join(fnamecleprefixtab)
-            
-            if clrfname=='':
-                clrfname=clrname
-            else:
-                clrfname=clrfname+'.'+clrname 
-                  
-            if clefname=='':
-                clefname=clename
-            else:
-                clefname=clefname+'.'+clename
+        curposclr=leveloneposinclr[curleveloneposinclr]
+        curposcle=leveloneposincle[curleveloneposincle]
 
-            matcheditems.append([idclr,idcle,clrname,clename,clrfname,clefname])
-            #print([idclr,idcle,clrname,clename,clrfname,clefname])
-            
-            curclepos+=1
-            curclrpos+=1
- 
-        elif curclelevel<curclrlevel:
-            curclrpos+=1
+        while curposcle < lenParsedPropertyCle and curposclr < lenParsedPropertyClr :
 
-        elif curclelevel>curclrlevel:
-            curclepos+=1
-        
-        prevclrname=clrname
-        prevclename=clename
-         
+            curpicclr=ParsedPropertyClr[curposclr][2]
+            curpiccle=ParsedPropertyCle[curposcle][2]
+            
+            curnameclr=ParsedPropertyClr[curposclr][1]
+            curnamecle=ParsedPropertyCle[curposcle][1]
+            curfnameclr=ParsedPropertyClr[curposclr][3]
+            curfnamecle=ParsedPropertyCle[curposcle][3]
+            
+            if curpicclr=='LEVEL1' or curpiccle=='LEVEL1':
+                if curposclr > leveloneposinclr[curleveloneposinclr] or curposcle > leveloneposincle[curleveloneposincle]:
+                    # Reached a next Level1 item 
+                    break                   
+                else:   
+                    # Level1 matching
+                    matcheditems.append([idclr,idcle,curnameclr,curnamecle,curfnameclr,curfnamecle])
+                    curposclr+=1
+                    curposcle+=1                    
+                    continue
+               
+            if curpicclr==curpiccle:                    
+                matcheditems.append([idclr,idcle,curnameclr,curnamecle,curfnameclr,curfnamecle])
+                curposclr+=1
+                curposcle+=1
+
+            else:
+                # Datatype mismatch, cannot match remaining items
+                # Skipping to next parameter of the CALL USING statement (level1 items)
+                # print(curnameclr+' - '+curpicclr+' ; '+curnamecle+' - '+curpiccle)
+                break
+                          
+        curleveloneposinclr+=1 
+        curleveloneposincle+=1
+
     return matcheditems
-
