@@ -9,7 +9,7 @@ import cast_upgrade_1_6_13 # @UnusedImport
 import logging
 from cast.application import ApplicationLevelExtension
 
-class FujitsuDrvCobolApplicationLevelExtension(ApplicationLevelExtension):
+class CobolApplicationLevelExtension(ApplicationLevelExtension):
 
     def end_application(self, application):
         
@@ -18,13 +18,13 @@ class FujitsuDrvCobolApplicationLevelExtension(ApplicationLevelExtension):
 
         kb=application.get_knowledge_base()
         
-        logging.info('Creating temp tables...')
+        logging.info('Creating temporary tables...')
         kb.execute_query(sqlq.get_sql_create_tmp_links())
         kb.execute_query(sqlq.get_sql_create_using_links())
         kb.execute_query(sqlq.get_sql_create_using_prdiv())
         kb.execute_query(sqlq.get_sql_create_links_table())
         
-        logging.info('SQL Processing...')
+        logging.info('SQL processing...')
         
         kb.execute_query(sqlq.get_sql_compute_properties_step01())
         kb.execute_query(sqlq.get_sql_idx_tmp_links())
@@ -49,30 +49,43 @@ class FujitsuDrvCobolApplicationLevelExtension(ApplicationLevelExtension):
         kb.execute_query(sqlq.get_sql_idx_create_links_idclr())
         kb.execute_query(sqlq.get_sql_idx_create_links_idcle())
         
-        logging.info('Final SQL Processing...')
+        logging.info('Final SQL processing...')
         kb.execute_query(sqlq.get_sql_update1_create_links_table())
         kb.execute_query(sqlq.get_sql_update21_create_links_table())
         kb.execute_query(sqlq.get_sql_update22_create_links_table())
         kb.execute_query(sqlq.get_sql_update31_create_links_table())
         kb.execute_query(sqlq.get_sql_update32_create_links_table())
+
+        # logging.info('Purging links...')
+        # application.update_cast_knowledge_base("Delete R links between Cobol Data items", """        
+        # delete from CI_NO_LINKS;        
+        # insert into CI_NO_LINKS (CALLER_ID, CALLED_ID, ERROR_ID)        
+        #     select idclr, idcle, 0 from Acc where acctyplo=65536 and acctyphi=0;            
+        # """) 
         
         logging.info('Creating links...')
         application.update_cast_knowledge_base("Create links between Cobol Data items", """        
         delete from CI_LINKS;        
+        
         insert into CI_LINKS (CALLER_ID, CALLED_ID, LINK_TYPE, ERROR_ID)        
             select distinct cleitemid, clritemid, 'referLink', 0
-            from create_links;            
+            from create_links
+            where not exists (select 1 from acc where idclr=cleitemid and idcle=clritemid and acctyplo=65536 and acctyphi=0);            
         """) 
-        
+
         nblinks_rs=kb.execute_query(sqlq.get_sql_nblinks_created())
         for row in nblinks_rs:
             nblinks=row[0]
+                  
         
-        logging.info('Cleanup...')
+        logging.info('Temporary tables cleanup...')
         kb.execute_query(sqlq.get_sql_drop_tmp_links())
         kb.execute_query(sqlq.get_sql_drop_using_links())
         kb.execute_query(sqlq.get_sql_drop_using_prdiv())
         kb.execute_query(sqlq.get_sql_drop_links_table())
+        kb.execute_query(sqlq.get_sql_drop_item_parents())
+        kb.execute_query(sqlq.get_sql_drop_item_parents_final())
         
         logging.info('Number of links created: '+str(nblinks))
         logging.info('##################################################################')
+        
