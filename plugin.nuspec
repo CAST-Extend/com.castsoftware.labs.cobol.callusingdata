@@ -12,6 +12,7 @@
     <requireLicenseAcceptance>true</requireLicenseAcceptance>
     <description>This extension helps understand the Cobol Data interface used by two Cobol Programs that are calling each other with a CALL USING statement: it will create REFER links between the matching Cobol Data items on callee and caller side.</description>
     <releaseNotes>https://github.com/CAST-Extend/com.castsoftware.labs.cobol.callusingdata/wiki</releaseNotes>
+    <tags>Platform:All</tags>
     <dependencies>
       <dependency id="CAIP" version="8.3.26" />
       <dependency id="com.castsoftware.mainframe" version="1.0.18-funcrel" />
